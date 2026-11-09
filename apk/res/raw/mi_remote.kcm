@@ -1,0 +1,6 @@
+# Apply only to the selected remote's physical keyboard layout.
+type OVERLAY
+map key 28 DPAD_CENTER
+map key usage 0x00070028 DPAD_CENTER
+map key 102 HOME
+map key usage 0x0007004a HOME

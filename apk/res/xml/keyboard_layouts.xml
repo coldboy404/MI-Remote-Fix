@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<keyboard-layouts
+  xmlns:android="http://schemas.android.com/apk/res/android" xmlns:androidprv="http://schemas.android.com/apk/prv/res/android">
+    <keyboard-layout android:label="遥控助手：中央确认" android:name="mi_remote" android:keyboardLayout="@raw/mi_remote" android:keyboardLocale="zh-CN|en-US" android:keyboardLayoutType="qwerty" />
+</keyboard-layouts>

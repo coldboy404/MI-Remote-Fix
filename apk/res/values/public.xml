@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <public type="color" name="app_icon_bg" id="0x7f010000" />
+    <public type="drawable" name="app_banner" id="0x7f020000" />
+    <public type="drawable" name="app_icon" id="0x7f020001" />
+    <public type="drawable" name="remote_assistant_banner" id="0x7f020002" />
+    <public type="drawable" name="remote_assistant_icon" id="0x7f020003" />
+    <public type="mipmap" name="ic_launcher" id="0x7f030000" />
+    <public type="raw" name="mi_remote" id="0x7f040000" />
+    <public type="string" name="accessibility_desc" id="0x7f050000" />
+    <public type="string" name="app_name" id="0x7f050001" />
+    <public type="xml" name="keyboard_layouts" id="0x7f060000" />
+    <public type="xml" name="voice_bridge_service" id="0x7f060001" />
+</resources>

@@ -1,0 +1,9 @@
+build/
+test-src/
+test-classes/
+__pycache__/
+*.pyc
+*.jks
+*.keystore
+.env
+password

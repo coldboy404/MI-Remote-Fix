@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_desc">遥控器方向键连发与 Play 商店语音搜索回填</string>
+    <string name="app_name">遥控助手</string>
+</resources>
