@@ -6054,6 +6054,15 @@
     .line 466
     const-string v0, "VoiceBridge"
 
+    invoke-direct {p0}, Llocal/voicebridge/VoiceBridgeService;->shouldObserveWindows()Z
+
+    move-result v1
+
+    if-nez v1, :inspect_voice_window
+
+    return-void
+
+    :inspect_voice_window
     :try_start_0
     new-instance v1, Ljava/util/ArrayList;
 
@@ -8546,6 +8555,20 @@
 .method private maybeDumpWindows(Ljava/lang/String;I)V
     .locals 6
 
+    # Diagnostics are opt-in and never run while merely navigating.
+    iget-boolean v0, p0, Llocal/voicebridge/VoiceBridgeService;->debugTree:Z
+
+    if-eqz v0, :dump_disabled
+
+    iget-boolean v0, p0, Llocal/voicebridge/VoiceBridgeService;->observationActive:Z
+
+    if-nez v0, :dump_enabled
+
+    :dump_disabled
+    return-void
+
+    :dump_enabled
+
     .line 1383
     invoke-static {}, Ljava/lang/System;->currentTimeMillis()J
 
@@ -10832,6 +10855,17 @@
 .method private scanForegroundWindow(Ljava/lang/String;)V
     .locals 5
 
+    # Idle windowWatch must not query remote accessibility trees.
+    invoke-direct {p0}, Llocal/voicebridge/VoiceBridgeService;->shouldObserveWindows()Z
+
+    move-result v0
+
+    if-nez v0, :scan_voice_windows
+
+    return-void
+
+    :scan_voice_windows
+
     .line 426
     const-string v0, "VoiceBridge"
 
@@ -11719,6 +11753,55 @@
 
     :cond_1
     return-void
+.end method
+
+.method private shouldObserveWindows()Z
+    .locals 4
+
+    # Keep the existing Katniss trigger TTL, not a navigation debounce.
+    iget-boolean v0, p0, Llocal/voicebridge/VoiceBridgeService;->voiceEnabled:Z
+
+    if-eqz v0, :no_voice_observation
+
+    iget-boolean v0, p0, Llocal/voicebridge/VoiceBridgeService;->observationActive:Z
+
+    if-nez v0, :recent_voice_observation
+
+    iget-wide v0, p0, Llocal/voicebridge/VoiceBridgeService;->lastKatnissEventMs:J
+
+    const-wide/16 v2, 0x0
+
+    cmp-long v2, v0, v2
+
+    if-lez v2, :no_voice_observation
+
+    invoke-static {}, Ljava/lang/System;->currentTimeMillis()J
+
+    move-result-wide v2
+
+    sub-long/2addr v2, v0
+
+    const-wide/16 v0, 0x0
+
+    cmp-long v0, v2, v0
+
+    if-ltz v0, :no_voice_observation
+
+    const-wide/16 v0, 0x2ee0
+
+    cmp-long v0, v2, v0
+
+    if-gtz v0, :no_voice_observation
+
+    :recent_voice_observation
+    const/4 v0, 0x1
+
+    return v0
+
+    :no_voice_observation
+    const/4 v0, 0x0
+
+    return v0
 .end method
 
 .method private voicePlatePresent()Z
@@ -12795,6 +12878,12 @@
 
     .line 692
     :cond_a
+    invoke-direct {v0}, Llocal/voicebridge/VoiceBridgeService;->shouldObserveWindows()Z
+
+    move-result v11
+
+    if-eqz v11, :cond_b
+
     invoke-direct {v0}, Llocal/voicebridge/VoiceBridgeService;->voicePlatePresent()Z
 
     move-result v11
@@ -12862,6 +12951,15 @@
 
     .line 700
     :cond_c
+    # Foreground bookkeeping/voice triggers above remain live; idle events
+    # must return before getSource, window dumps and recursive collection.
+    iget-boolean v3, v0, Llocal/voicebridge/VoiceBridgeService;->observationActive:Z
+
+    if-nez v3, :event_voice_active
+
+    return-void
+
+    :event_voice_active
     iget-boolean v3, v0, Llocal/voicebridge/VoiceBridgeService;->observationActive:Z
 
     if-nez v3, :cond_e

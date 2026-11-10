@@ -16,7 +16,9 @@ jobs:
           distribution: temurin
           java-version: '17'
       - name: Test routing
-        run: python3 checks/test_focus.py
+        run: |
+          python3 checks/test_focus.py
+          python3 checks/test_navigation.py
       - name: Build unsigned (push and PR)
         if: github.event_name != 'workflow_dispatch'
         run: python3 scripts/build.py
