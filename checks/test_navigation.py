@@ -88,7 +88,16 @@ class NavigationChecks(unittest.TestCase):
             "handleLegacyRemoteKey": "884b22595b4d32b662528efac2084603216bc9d43e2ae334e7e406471a4b0dfd",
         }
         for name, digest in baseline_sha256.items():
-            self.assertEqual(digest, hashlib.sha256(method(name).encode()).hexdigest())
+            body = method(name)
+            if name == "onKeyEvent":
+                # Cancellation observer precedes the unchanged routing body.
+                prefix, body = body.split("    :voice_navigation_checked\n\n", 1)
+                self.assertIn("->cancelObservation()V", prefix)
+                self.assertIn("const/4 v1, 0x3", prefix)
+                self.assertIn("const/4 v1, 0x4", prefix)
+                self.assertNotIn("return", prefix)
+                body = ".method protected onKeyEvent(Landroid/view/KeyEvent;)Z\n    .locals 7\n\n" + body
+            self.assertEqual(digest, hashlib.sha256(body.encode()).hexdigest())
         self.assertIn("const/16 v2, 0x32b9", method("onKeyEvent"))
         self.assertIn("return v0", method("onKeyEvent"))
 

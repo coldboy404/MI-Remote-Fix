@@ -19,6 +19,7 @@ jobs:
         run: |
           python3 checks/test_focus.py
           python3 checks/test_navigation.py
+          python3 checks/test_voice_session.py
       - name: Build unsigned (push and PR)
         if: github.event_name != 'workflow_dispatch'
         run: python3 scripts/build.py

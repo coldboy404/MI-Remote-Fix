@@ -1454,8 +1454,69 @@
     return-void
 .end method
 
+.method private holdVoiceResult()Z
+    .locals 8
+    iget-object v0, p0, Llocal/voicebridge/VoiceBridgeService;->originPackage:Ljava/lang/String;
+    iget-boolean v1, p0, Llocal/voicebridge/VoiceBridgeService;->assistantSeen:Z
+    invoke-direct {p0}, Llocal/voicebridge/VoiceBridgeService;->chooseFinalText()Ljava/lang/String;
+    move-result-object v2
+    iget-object v3, p0, Llocal/voicebridge/VoiceBridgeService;->lastForegroundPackage:Ljava/lang/String;
+    invoke-static {}, Ljava/lang/System;->currentTimeMillis()J
+    move-result-wide v4
+    iget-wide v6, p0, Llocal/voicebridge/VoiceBridgeService;->assistDownMs:J
+    sub-long/2addr v4, v6
+    invoke-static/range {v0 .. v5}, Llocal/voicebridge/VoiceSessionPolicy;->holdResult(Ljava/lang/String;ZLjava/lang/String;Ljava/lang/String;J)Z
+    move-result v0
+    return v0
+.end method
+
+.method public restoreVoiceSearchOrigin()V
+    .locals 3
+
+    iget-boolean v0, p0, Llocal/voicebridge/VoiceBridgeService;->observationActive:Z
+    if-eqz v0, :restore_done
+    iget-boolean v0, p0, Llocal/voicebridge/VoiceBridgeService;->setTextInProgress:Z
+    if-eqz v0, :restore_done
+    invoke-direct {p0}, Llocal/voicebridge/VoiceBridgeService;->holdVoiceResult()Z
+    move-result v0
+    if-eqz v0, :restore_done
+
+    :restore_try
+    invoke-virtual {p0}, Llocal/voicebridge/VoiceBridgeService;->getPackageManager()Landroid/content/pm/PackageManager;
+    move-result-object v0
+    const-string v1, "com.android.vending"
+    invoke-virtual {v0, v1}, Landroid/content/pm/PackageManager;->getLeanbackLaunchIntentForPackage(Ljava/lang/String;)Landroid/content/Intent;
+    move-result-object v0
+    if-eqz v0, :restore_done
+    # Reuse existing search task, never clear it or synthesize HOME/BACK.
+    const v1, 0x10020000
+    invoke-virtual {v0, v1}, Landroid/content/Intent;->setFlags(I)Landroid/content/Intent;
+    invoke-virtual {p0, v0}, Llocal/voicebridge/VoiceBridgeService;->startActivity(Landroid/content/Intent;)V
+    const-string v0, "VoiceBridge"
+    const-string v1, "restored Store task for recognized voice result"
+    invoke-static {v0, v1}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+    :restore_end
+    .catch Ljava/lang/RuntimeException; {:restore_try .. :restore_end} :restore_failed
+    goto :restore_done
+    :restore_failed
+    move-exception v2
+    const-string v0, "VoiceBridge"
+    const-string v1, "voice Store restore failed; bounded fill will expire"
+    invoke-static {v0, v1, v2}, Landroid/util/Log;->w(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
+    :restore_done
+    return-void
+.end method
+
 .method private cancelObservation()V
     .locals 2
+
+    # Retire cached evidence as well as callbacks.
+    invoke-static {}, Ljava/lang/System;->currentTimeMillis()J
+    move-result-wide v0
+    iput-wide v0, p0, Llocal/voicebridge/VoiceBridgeService;->observationFinishedMs:J
+    const-wide/16 v0, 0x0
+    iput-wide v0, p0, Llocal/voicebridge/VoiceBridgeService;->lastKatnissEventMs:J
+    iput-wide v0, p0, Llocal/voicebridge/VoiceBridgeService;->lastAssistantEventMs:J
 
     const/4 v0, 0x0
 
@@ -4012,6 +4073,18 @@
 .method private ensureVoicePlateObservation(ZLjava/lang/String;)V
     .locals 13
 
+    # Only fresh assistant evidence in the store may create a session.
+    iget-boolean v0, p0, Llocal/voicebridge/VoiceBridgeService;->observationActive:Z
+    move v1, p1
+    iget-object v2, p0, Llocal/voicebridge/VoiceBridgeService;->lastForegroundPackage:Ljava/lang/String;
+    iget-wide v3, p0, Llocal/voicebridge/VoiceBridgeService;->lastKatnissEventMs:J
+    iget-wide v5, p0, Llocal/voicebridge/VoiceBridgeService;->observationFinishedMs:J
+    invoke-static/range {v0 .. v6}, Llocal/voicebridge/VoiceSessionPolicy;->canObserve(ZZLjava/lang/String;JJ)Z
+    move-result v0
+    if-nez v0, :session_observe_allowed
+    return-void
+    :session_observe_allowed
+
     .line 371
     const-string v0, "observe"
 
@@ -5716,6 +5789,29 @@
 
 .method private insertTextIntoPlaySearch(Ljava/lang/String;)Z
     .locals 9
+
+    iget-object v0, p0, Llocal/voicebridge/VoiceBridgeService;->lastForegroundPackage:Ljava/lang/String;
+    invoke-static {v0}, Llocal/voicebridge/VoiceSessionPolicy;->canInsert(Ljava/lang/String;)Z
+    move-result v0
+    if-nez v0, :insert_owned
+    const/4 v0, 0x0
+    return v0
+    :insert_owned
+    # Cached foreground alone is insufficient: require the active root too.
+    invoke-virtual {p0}, Llocal/voicebridge/VoiceBridgeService;->getRootInActiveWindow()Landroid/view/accessibility/AccessibilityNodeInfo;
+    move-result-object v0
+    if-eqz v0, :insert_not_owned
+    invoke-virtual {v0}, Landroid/view/accessibility/AccessibilityNodeInfo;->getPackageName()Ljava/lang/CharSequence;
+    move-result-object v0
+    invoke-direct {p0, v0}, Llocal/voicebridge/VoiceBridgeService;->cs(Ljava/lang/CharSequence;)Ljava/lang/String;
+    move-result-object v0
+    invoke-static {v0}, Llocal/voicebridge/VoiceSessionPolicy;->canInsert(Ljava/lang/String;)Z
+    move-result v0
+    if-nez v0, :insert_root_owned
+    :insert_not_owned
+    const/4 v0, 0x0
+    return v0
+    :insert_root_owned
 
     .line 1554
     const-string v0, "VoiceBridge"
@@ -12942,6 +13038,12 @@
     if-nez v3, :cond_c
 
     .line 697
+    # A recognized result may survive a short known launcher transition.
+    # Retaining it is not permission to launch or focus a background store.
+    invoke-direct {v0}, Llocal/voicebridge/VoiceBridgeService;->holdVoiceResult()Z
+    move-result v3
+    if-nez v3, :cond_c
+
     invoke-direct {v0}, Llocal/voicebridge/VoiceBridgeService;->cancelObservation()V
 
     .line 698
@@ -13904,6 +14006,20 @@
 
 .method protected onKeyEvent(Landroid/view/KeyEvent;)Z
     .locals 7
+
+    # Observe cancellation only; do not consume or reroute any remote key.
+    invoke-virtual {p1}, Landroid/view/KeyEvent;->getAction()I
+    move-result v0
+    if-nez v0, :voice_navigation_checked
+    invoke-virtual {p1}, Landroid/view/KeyEvent;->getKeyCode()I
+    move-result v0
+    const/4 v1, 0x3
+    if-eq v0, v1, :voice_user_cancel
+    const/4 v1, 0x4
+    if-ne v0, v1, :voice_navigation_checked
+    :voice_user_cancel
+    invoke-direct {p0}, Llocal/voicebridge/VoiceBridgeService;->cancelObservation()V
+    :voice_navigation_checked
 
     invoke-virtual {p1}, Landroid/view/KeyEvent;->getDevice()Landroid/view/InputDevice;
 

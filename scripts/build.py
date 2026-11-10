@@ -11,12 +11,12 @@ for line in (tools/'SHA256SUMS').read_text().splitlines():
 build=p/'build'
 if build.exists(): shutil.rmtree(build)
 build.mkdir()
-run([javac,'-source','8','-target','8','-bootclasspath',tools/'android-34.jar','-d',build/'classes',p/'src/local/voicebridge/InputPassthrough.java'])
+run([javac,'-source','8','-target','8','-bootclasspath',tools/'android-34.jar','-d',build/'classes',*sorted((p/'src/local/voicebridge').glob('*.java'))])
 run([java,'-cp',tools/'dex2jar-lib/dx-30.0.2.jar','com.android.dx.command.Main','--dex','--output='+str(build/'helper.dex'),build/'classes'])
 run([java,'-cp',str(tools/'dex2jar-lib/*'),'com.googlecode.d2j.smali.BaksmaliCmd','-o',build/'helper-smali',build/'helper.dex'])
 tree=build/'apk'
 shutil.copytree(p/'apk',tree)
-for f in (build/'helper-smali/local/voicebridge').glob('InputPassthrough*.smali'):
+for f in (build/'helper-smali/local/voicebridge').glob('*.smali'):
  s=re.sub(r'const/high16 (v\d+), (\d+)',lambda m:'const '+m[1]+', '+hex(int(m[2])<<16),f.read_text())
  (tree/'smali/local/voicebridge'/f.name).write_text(s)
 run([java,'-jar',tools/'apktool.jar','b','-f',tree,'-o',build/'remote-assistant-unsigned.apk'])

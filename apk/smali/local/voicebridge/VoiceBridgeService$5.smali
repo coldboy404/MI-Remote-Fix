@@ -339,6 +339,14 @@
 
     if-eqz v3, :cond_2
 
+    # Never issue global BACK against Home or an unrelated foreground app.
+    iget-object v3, p0, Llocal/voicebridge/VoiceBridgeService$5;->this$0:Llocal/voicebridge/VoiceBridgeService;
+    invoke-static {v3}, Llocal/voicebridge/VoiceBridgeService;->-$$Nest$fgetlastForegroundPackage(Llocal/voicebridge/VoiceBridgeService;)Ljava/lang/String;
+    move-result-object v3
+    invoke-static {v3}, Llocal/voicebridge/VoiceSessionPolicy;->canInsert(Ljava/lang/String;)Z
+    move-result v3
+    if-eqz v3, :cond_2
+
     .line 232
     iget-object v3, p0, Llocal/voicebridge/VoiceBridgeService$5;->this$0:Llocal/voicebridge/VoiceBridgeService;
 
@@ -406,6 +414,11 @@
     move-result-object v0
 
     invoke-static {v2, v0}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+
+    # Restore only the live, recognized Store session across assistant Home.
+    iget-object v0, p0, Llocal/voicebridge/VoiceBridgeService$5;->this$0:Llocal/voicebridge/VoiceBridgeService;
+
+    invoke-virtual {v0}, Llocal/voicebridge/VoiceBridgeService;->restoreVoiceSearchOrigin()V
 
     .line 238
     iget-object v0, p0, Llocal/voicebridge/VoiceBridgeService$5;->this$0:Llocal/voicebridge/VoiceBridgeService;
